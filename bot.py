@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from pathlib import Path
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, BufferedInputFile, ReplyKeyboardMarkup, KeyboardButton, BotCommand
 from dotenv import load_dotenv
@@ -22,6 +22,8 @@ if not TOKEN or not OWNER_ID:
 
 dp = Dispatcher()
 dp.include_router(leads_router)
+legacy_router = Router()
+dp.include_router(legacy_router)
 MENU = ReplyKeyboardMarkup(keyboard=[
     [KeyboardButton(text='🎯 Лиды'), KeyboardButton(text='👥 Клиенты')],
     [KeyboardButton(text='🥩 Товары'), KeyboardButton(text='📦 Заказы')],
@@ -81,7 +83,7 @@ def value(qty_g, kop_per_kg):
 def sale_price(purchase_kop, markup):
     return int((Decimal(purchase_kop) * (Decimal('1') + Decimal(markup)/100)).quantize(Decimal('1'), rounding=ROUND_HALF_UP))
 
-@dp.message()
+@legacy_router.message()
 async def handle(m: Message):
     if not m.from_user or m.from_user.id != OWNER_ID:
         await m.answer('Доступ закрыт.')
