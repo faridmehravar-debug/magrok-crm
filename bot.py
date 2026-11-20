@@ -11,6 +11,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message, BufferedInputFile, ReplyKeyboardMarkup, KeyboardButton, BotCommand
 from dotenv import load_dotenv
+from leads import router as leads_router, init_leads
 
 load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN', '')
@@ -20,9 +21,11 @@ if not TOKEN or not OWNER_ID:
     raise RuntimeError('Fill BOT_TOKEN and OWNER_ID in .env')
 
 dp = Dispatcher()
+dp.include_router(leads_router)
 MENU = ReplyKeyboardMarkup(keyboard=[
-    [KeyboardButton(text='👥 Клиенты'), KeyboardButton(text='🥩 Товары')],
-    [KeyboardButton(text='📦 Заказы'), KeyboardButton(text='💳 Оплаты и долги')],
+    [KeyboardButton(text='🎯 Лиды'), KeyboardButton(text='👥 Клиенты')],
+    [KeyboardButton(text='🥩 Товары'), KeyboardButton(text='📦 Заказы')],
+    [KeyboardButton(text='💳 Оплаты и долги')],
     [KeyboardButton(text='📊 Отчёт'), KeyboardButton(text='📤 Экспорт')],
     [KeyboardButton(text='❓ Помощь')],
 ], resize_keyboard=True, input_field_placeholder='Выбери раздел или введи команду')
@@ -92,6 +95,7 @@ async def handle(m: Message):
     try:
         if cmd in ('/start', '/help'):
             await m.answer('МАГРОК CRM — личный учёт\n\n'
+                '/leads — лиды, источники и задачи (через кнопки)\n'
                 '/client Название | Телефон | Примечание — добавить клиента\n'
                 '/clients — список клиентов\n'
                 '/product Название | Закупка с НДС за кг | Наценка % — товар\n'
@@ -176,7 +180,7 @@ async def handle(m: Message):
         elif cmd == '/export':
             with db() as c:
                 for name,query in [
-                    ('clients','SELECT * FROM clients'),('products','SELECT * FROM products'),
+                    ('clients','SELECT * FROM clients'),('leads','SELECT * FROM leads'),('lead_events','SELECT * FROM lead_events'),('products','SELECT * FROM products'),
                     ('orders','SELECT * FROM orders'),('payments','SELECT * FROM payments')]:
                     rows=c.execute(query).fetchall()
                     out=io.StringIO(); w=csv.writer(out,delimiter=';')
@@ -192,12 +196,14 @@ async def handle(m: Message):
 
 async def main():
     init_db()
+    init_leads()
     bot=Bot(TOKEN)
     await bot.set_my_commands([
         BotCommand(command='start', description='Главное меню'),
         BotCommand(command='help', description='Все команды и примеры'),
         BotCommand(command='client', description='Добавить клиента'),
         BotCommand(command='clients', description='Список клиентов'),
+        BotCommand(command='leads', description='Лиды и контакты'),
         BotCommand(command='product', description='Добавить или обновить товар'),
         BotCommand(command='products', description='Прайс и товары'),
         BotCommand(command='order', description='Создать строку заказа'),
